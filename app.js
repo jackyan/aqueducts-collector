@@ -4,31 +4,29 @@ var kafka = require('./kafka');
 
 var Producers = {};
 config.clusters.forEach(function(v, i, a){
-//  console.log('%s %s', v.name, v.broker_list);
   Producers[v.name] = kafka.make_producer(v.broker_list);
 });
 
 function selectProducer(message) {
+  var target = null;
   if ("topic_list" == config.load_balancer) {
     config.clusters.forEach(function(v, i, a) {
       if (v.topic_list.indexOf(message.topic) > -1) {
-        console.log("topic_list, %s", v.name);
-        return Producers[v.name];
+        target = v.name;
       }
     });
   } else {
     config.clusters.forEach(function(v, i, a) {
       if (v.idc_list.indexOf(message.idc) > -1) {
-        console.log("broker_list, %s", v.name);
-        return Producers[v.name];
+        target = v.name;
       }
     });
   }
-  return null;
+  return Producers[target];
 }
 
 function publish(req, res, next) {
-  var message = JSON.parse(req.params.message);
+  var message = JSON.parse(req.params.message || null);
   var key = req.params.key || message.key || null;
   var topic = message.topic;
   var producer = selectProducer(message);
@@ -66,6 +64,6 @@ if (cluster.isMaster) {
     server.post('/publish', publish);
 
     server.listen(config.http_port, function() {
-      console.log('%d listening at %s', worker.process.pid, server.url);
+      console.log('listening at %s', server.url);
     });
 }

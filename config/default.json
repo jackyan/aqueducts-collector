@@ -1,8 +1,8 @@
 {
-  "workers" : 1,
+  "workers" : 2,
   "http_port" : 8080,
   "udp_port" : 8090,
-  "load_balancer" : "topic_list", // "topic_list" or "idc_list"
+  "load_balancer" : "idc_list", // "topic_list" or "idc_list"
   "clusters" : [ 
     { 
       "name" : "cluster1",
