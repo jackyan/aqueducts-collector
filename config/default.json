@@ -1,0 +1,9 @@
+{
+  "workers": 1,
+  "http_port": 8080,
+  "udp_port": 8090,
+  "clusters":[ 
+    {"name": "cluster1", "broker_list": "cq01-aqueducts-kafka00.cq01:9092"},
+    {"name": "cluster2", "broker_list": "cq01-aqueducts-kafka00.cq01:9092"}
+  ]
+}
