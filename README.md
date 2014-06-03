@@ -1,3 +1,3 @@
 1. `npm install java restify config`
-1. `curl -X POST -d 'topic=nodejs_test_topic&messages={"a",1}' http://localhost:8080/publish`
-1. `curl -X POST -d 'messages={"a",1}' http://localhost:8080/publish/nodejs_test_topic`
+1. `nodejs app.js`
+1. `curl -X POST -d 'messages={"topic" : "test_topic_4_dba", "a":1, "idc": "tc"}' http://localhost:8080/publish`

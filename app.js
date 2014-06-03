@@ -4,17 +4,42 @@ var kafka = require('./kafka');
 
 var Producers = {};
 config.clusters.forEach(function(v, i, a){
-  console.log('%s %s', v.name, v.broker_list);
-//  Producers[v.name] = kafka.make_producer(v.broker_list);
+//  console.log('%s %s', v.name, v.broker_list);
+  Producers[v.name] = kafka.make_producer(v.broker_list);
 });
 
-function publish(req, res, next) {
-  var topic = req.params.topic || "default";
-  var key = req.params.key || null;
-  var messages = req.params.messages;
+function selectProducer(message) {
+  if ("topic_list" == config.load_balancer) {
+    config.clusters.forEach(function(v, i, a) {
+      if (v.topic_list.indexOf(message.topic) > -1) {
+        console.log("topic_list, %s", v.name);
+        return Producers[v.name];
+      }
+    });
+  } else {
+    config.clusters.forEach(function(v, i, a) {
+      if (v.idc_list.indexOf(message.idc) > -1) {
+        console.log("broker_list, %s", v.name);
+        return Producers[v.name];
+      }
+    });
+  }
+  return null;
+}
 
-  Producers['cluster1'].sendSync(new kafka.KeyedMessage(topic, key, messages));
-  res.send('OK\n');
+function publish(req, res, next) {
+  var message = JSON.parse(req.params.message);
+  var key = req.params.key || message.key || null;
+  var topic = message.topic;
+  var producer = selectProducer(message);
+
+  if (null == message || null == topic || null == producer)
+    res.send("Wrong format");
+  else {
+    producer.sendSync(new kafka.KeyedMessage(topic, key, req.params.message));
+    res.send('OK\n');
+  }
+
   next();
 }
 
@@ -39,10 +64,8 @@ if (cluster.isMaster) {
 
     server.get('/publish', publish);
     server.post('/publish', publish);
-    server.get('/publish/:topic', publish);
-    server.post('/publish/:topic', publish);
 
     server.listen(config.http_port, function() {
-      console.log('%s listening at %s', server.name, server.url);
+      console.log('%d listening at %s', worker.process.pid, server.url);
     });
 }

@@ -1,9 +1,20 @@
 {
-  "workers": 1,
-  "http_port": 8080,
-  "udp_port": 8090,
-  "clusters":[ 
-    {"name": "cluster1", "broker_list": "cq01-aqueducts-kafka00.cq01:9092"},
-    {"name": "cluster2", "broker_list": "cq01-aqueducts-kafka00.cq01:9092"}
+  "workers" : 1,
+  "http_port" : 8080,
+  "udp_port" : 8090,
+  "load_balancer" : "topic_list", // "topic_list" or "idc_list"
+  "clusters" : [ 
+    { 
+      "name" : "cluster1",
+      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
+      "topic_list" : ["test_topic_4_dba"],
+      "idc_list" : []
+    },
+    {
+      "name" : "cluster2",
+      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
+      "topic_list" : [],
+      "idc_list" : ["tc"]
+    }
   ]
 }
