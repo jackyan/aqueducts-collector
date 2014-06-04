@@ -1,21 +1,21 @@
 {
   "name" : "nodejs2kafka",
   "description" : "http restful & udp router of kafka using nodejs",
-  "author": {
-    "name": "dongfang qu",
-    "email": "qudongfang@gmail.com"
-  },  
-  "keywords": [ "kafka", "restful", "router" ],  
+  "author" : {
+    "name" : "dongfang qu",
+    "email" : "qudongfang@gmail.com"
+  },
+  "keywords" : [ "kafka", "restful", "router" ],
   "version" : "0.0.1",
-  "engines": {
-    "node": ">=0.10.26"
-  },  
+  "engines" : {
+    "node" : ">=0.10.26"
+  },
   "maintainers": [
-    {   
-      "name": "Joe Ferner",
-      "email": "joe@fernsroth.com"
+    {
+      "name" : "qu dongfang",
+      "email" : "qudongfang@gmail.com"
     }
-  ], 
+  ],
   "repository" : {
     "type" : "git",
     "url" : "http://github.com/castomer/nodejs2kafka.git"
@@ -25,10 +25,10 @@
     "java" : ">=0.3.4",
     "config" : ">=0.4.36"
   },
-  "scripts": {
-    "start": "node app.js",
+  "scripts" : {
+    "start" : "node app.js"
   },
   "main" : "./app.js",
-  "readmeFilename": "README.md",
-  "homepage": "https://github.com/castomer/nodejs2kafka"
+  "readmeFilename" : "README.md",
+  "homepage" : "https://github.com/castomer/nodejs2kafka"
 }
