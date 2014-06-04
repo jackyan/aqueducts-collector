@@ -1,6 +1,7 @@
 {
   "workers" : 2,
   "http_port" : 8080,
+  "udp_port" : "udp4", // "udp4" or "udp6"
   "udp_port" : 8090,
   "load_balancer" : "idc_list", // "topic_list" or "idc_list"
   "clusters" : [ 

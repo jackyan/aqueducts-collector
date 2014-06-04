@@ -25,24 +25,32 @@ function selectProducer(message) {
   return Producers[target];
 }
 
-function publish(req, res, next) {
-  var message = JSON.parse(req.params.message || null);
-  var key = req.params.key || message.key || null;
+function publish(msg) {
+  var message = JSON.parse(msg || null);
+  var key = message.key || null;
   var topic = message.topic;
   var producer = selectProducer(message);
 
   if (null == message || null == topic || null == producer)
-    res.send("Wrong format");
+    return false;
   else {
     producer.sendSync(new kafka.KeyedMessage(topic, key, req.params.message));
-    res.send('OK\n');
+    return true;
   }
+}
+
+function httpPublish(req, res, next) {
+  if (publish(req.params.message))
+    res.send("Wrong format");
+  else
+    res.send('OK\n');
 
   next();
 }
 
 var cluster = require('cluster');
 var http = require('http');
+var dgram = require("dgram");
 var workers = config.workers || require('os').cpus().length;
 
 if (cluster.isMaster) {
@@ -54,16 +62,28 @@ if (cluster.isMaster) {
     console.log('worker ' + worker.process.pid + ' died');
   });
   } else {
-    var server = restify.createServer();
-    //server.use(restify.authorizationParser());
-    server.use(restify.queryParser());
-    server.use(restify.bodyParser());
-    server.use(restify.conditionalRequest());
+    // http restify server
+    var httpServer = restify.createServer();
+    httpServer.use(restify.queryParser());
+    httpServer.use(restify.bodyParser());
+    httpServer.use(restify.conditionalRequest());
 
-    server.get('/publish', publish);
-    server.post('/publish', publish);
+    httpServer.get('/publish', httpPublish);
+    httpServer.post('/publish', httpPublish);
 
-    server.listen(config.http_port, function() {
-      console.log('listening at %s', server.url);
+    httpServer.listen(config.http_port, function() {
+      console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', server.url);
     });
+
+    // udp server
+    var udpServer = dgram.createSocket(config.udp_version, function(msg, rinfo) {
+      publish(msg);
+    });
+
+    udpServer.on('listening', function () {
+        var address = server.address();
+        console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
+    });
+
+    udpServer.bind(config.udp_port);
 }
