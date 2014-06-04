@@ -26,16 +26,20 @@ function selectProducer(message) {
 }
 
 function publish(msg) {
-  var message = JSON.parse(msg || null);
-  var key = message.key || null;
-  var topic = message.topic;
-  var producer = selectProducer(message);
+  try {
+    var message = JSON.parse(msg || null);
+    var key = message.key || null;
+    var topic = message.topic;
+    var producer = selectProducer(message);
 
-  if (null == message || null == topic || null == producer)
+    if (null == message || null == topic || null == producer)
+      return false;
+    else {
+      producer.sendSync(new kafka.KeyedMessage(topic, key, msg.toString()));
+      return true;
+    }
+  } catch (err) {
     return false;
-  else {
-    producer.sendSync(new kafka.KeyedMessage(topic, key, req.params.message));
-    return true;
   }
 }
 
@@ -72,7 +76,7 @@ if (cluster.isMaster) {
     httpServer.post('/publish', httpPublish);
 
     httpServer.listen(config.http_port, function() {
-      console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', server.url);
+      console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', httpServer.url);
     });
 
     // udp server
@@ -81,7 +85,7 @@ if (cluster.isMaster) {
     });
 
     udpServer.on('listening', function () {
-        var address = server.address();
+        var address = udpServer.address();
         console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
     });
 
