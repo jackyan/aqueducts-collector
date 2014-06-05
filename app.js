@@ -65,7 +65,13 @@ if (cluster.isMaster) {
   cluster.on('exit', function(worker, code, signal) {
     console.log('worker ' + worker.process.pid + ' died');
   });
-  } else {
+} else {
+    // process setting
+    process.on('uncaughtException', function(err) {
+      console.error(err);
+      // process.exit(1);
+    });
+
     // http restify server
     var httpServer = restify.createServer();
     httpServer.use(restify.queryParser());
