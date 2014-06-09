@@ -7,7 +7,7 @@
   "clusters" : [ 
     { 
       "name" : "default",
-      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
+      "broker_list": "cq01-aqueducts-kafka00.cq01:9092"
     },
     { 
       "name" : "cluster1",

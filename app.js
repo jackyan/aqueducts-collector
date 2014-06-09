@@ -57,10 +57,6 @@ function publish(msg) {
 }
 
 function httpPublish(req, res, next) {
-  //var result = {}
-  //result.response = publish(req.params.message);
-  //res.send(JSON.stringify(result));
-
   res.send({reponse : publish(req.params.message) });
   next();
 }
@@ -98,12 +94,17 @@ if (cluster.isMaster) {
 
     // tcp server
     net = require('net');
-    net.createServer(function (socket) {
+    var tcpServer = net.createServer(function (socket) {
       socket.on('data', function (data) {
         // publish
         publish(data.toString());
       });
-    }).listen(8089);
+    });
+
+    tcpServer.listen(config.tcp_port, function() {
+      var address = tcpServer.address();
+      console.log('Process ID: ' + process.pid + ' TCP Server listening on %s' + address.address + ":" + address.port);
+    });
 
     // udp server
     var dgram = require("dgram");
