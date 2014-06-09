@@ -6,6 +6,10 @@
   "load_balancer" : "idc_list", // "topic_list" or "idc_list"
   "clusters" : [ 
     { 
+      "name" : "default",
+      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
+    },
+    { 
       "name" : "cluster1",
       "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
       "topic_list" : ["test_topic_4_dba"],

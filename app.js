@@ -8,7 +8,7 @@ config.clusters.forEach(function(v, i, a){
 });
 
 function selectProducer(message) {
-  var target = null;
+  var target = "default";
   if ("topic_list" == config.load_balancer) {
     config.clusters.forEach(function(v, i, a) {
       if (v.topic_list.indexOf(message.topic) > -1) {
@@ -25,35 +25,44 @@ function selectProducer(message) {
   return Producers[target];
 }
 
+function check(msg) {
+  return true;
+}
+
 function publish(msg) {
   try {
     var message = JSON.parse(msg || null);
     var key = message.key || null;
-    var topic = message.topic;
+    var topic = message.product + "_" + message.service + "_topic";
     var producer = selectProducer(message);
 
-    if (null == message || null == topic || null == producer)
-      return false;
+    if (null == message || null == message.product || null == message.service || null == producer)
+      return "product && service must be provided";
     else {
+      if (!check(message))
+        return "please register first";
+
+      msg.event_time = new Date().getTime();
+      msg.topic = topic;
+
       producer.sendSync(new kafka.KeyedMessage(topic, key, msg.toString()));
-      return true;
+      return "ok";
     }
   } catch (err) {
-    return false;
+    return "invalid format";
   }
 }
 
 function httpPublish(req, res, next) {
-  if (publish(req.params.message))
-    res.send("Wrong format");
-  else
-    res.send('OK\n');
+  var result = {}
+
+  result.response = publish(req.params.message);
+  res.send(JSON.stringify(result));
 
   next();
 }
 
 var cluster = require('cluster');
-var http = require('http');
 var dgram = require("dgram");
 var workers = config.workers || require('os').cpus().length;
 
@@ -91,8 +100,8 @@ if (cluster.isMaster) {
     });
 
     udpServer.on('listening', function () {
-        var address = udpServer.address();
-        console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
+      var address = udpServer.address();
+      console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
     });
 
     udpServer.bind(config.udp_port);
