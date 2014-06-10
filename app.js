@@ -56,6 +56,20 @@ function publish(msg) {
   }
 }
 
+function publishBulk(msg) {
+  var bulkMsgs = msg.toString();                                                                                                                                                                    
+  var lines = null;
+  if (bulkMsgs.indexOf("\n") > -1) {                                                                                                                                                                
+    lines = bulkMsgs.split("\n");                                                                                                                                                             
+  } else {                                                                                                                                                                                             
+    lines = [ bulkMsgs ] ;                                                                                                                                                                    
+  }   
+  lines.forEach(function(line) {
+    // publish
+    publish(line);
+  });
+}
+
 function httpPublish(req, res, next) {
   res.send({reponse : publish(req.params.message) });
   next();
@@ -95,21 +109,26 @@ if (cluster.isMaster) {
     // tcp server
     net = require('net');
     var tcpServer = net.createServer(function (socket) {
-      socket.on('data', function (data) {
-        // publish
-        publish(data.toString());
+        var data = '';
+        socket.setEncoding('utf8');
+        socket.on('data', function(chunk) {
+          data += chunk;
+        });
+
+        socket.on('end', function() {
+          publishBulk(data);
       });
     });
 
     tcpServer.listen(config.tcp_port, function() {
       var address = tcpServer.address();
-      console.log('Process ID: ' + process.pid + ' TCP Server listening on %s' + address.address + ":" + address.port);
+      console.log('Process ID: ' + process.pid + ' TCP Server listening on ' + address.address + ":" + address.port);
     });
 
     // udp server
     var dgram = require("dgram");
     var udpServer = dgram.createSocket(config.udp_version, function(msg, rinfo) {
-      publish(msg);
+      publishBulk(msg);
     });
 
     udpServer.on('listening', function () {
@@ -119,3 +138,4 @@ if (cluster.isMaster) {
 
     udpServer.bind(config.udp_port);
 }
+
