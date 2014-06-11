@@ -45,10 +45,10 @@ function publish(msg) {
       if (!check(message))
         return "please register first";
 
-      msg.event_time = new Date().getTime();
-      msg.topic = topic;
+      message.event_time = new Date().getTime();
+      message.topic = topic;
 
-      producer.sendSync(new kafka.KeyedMessage(topic, key, msg.toString()));
+      producer.sendSync(new kafka.KeyedMessage(topic, key, JSON.stringify(message)));
       return "ok";
     }
   } catch (err) {
@@ -87,55 +87,65 @@ if (cluster.isMaster) {
     console.log('worker ' + worker.process.pid + ' died');
   });
 } else {
-    // process setting
-    process.on('uncaughtException', function(err) {
-      console.error(err);
-      // process.exit(1);
-    });
+  // process setting
+  process.on('uncaughtException', function(err) {
+    console.error(err);
+    // process.exit(1);
+  });
 
-    // http restify server
-    var httpServer = restify.createServer();
-    httpServer.use(restify.queryParser());
-    httpServer.use(restify.bodyParser());
-    httpServer.use(restify.conditionalRequest());
+  // http restify server
+  var httpServer = restify.createServer();
+  httpServer.use(restify.queryParser());
+  httpServer.use(restify.bodyParser());
+  httpServer.use(restify.conditionalRequest());
 
-    httpServer.get('/publish', httpPublish);
-    httpServer.post('/publish', httpPublish);
+  httpServer.get('/publish', httpPublish);
+  httpServer.post('/publish', httpPublish);
 
-    httpServer.listen(config.http_port, function() {
-      console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', httpServer.url);
-    });
+  httpServer.listen(config.http_port, function() {
+    console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', httpServer.url);
+  });
 
-    // tcp server
-    net = require('net');
-    var tcpServer = net.createServer(function (socket) {
-        var data = '';
-        socket.setEncoding('utf8');
-        socket.on('data', function(chunk) {
-          data += chunk;
-        });
-
-        socket.on('end', function() {
-          publishBulk(data);
+  // tcp server
+  var net = require('net');
+  var tcpServer = net.createServer(function (socket) {
+      var data = '';
+      socket.setEncoding('utf8');
+      socket.on('data', function(chunk) {
+        publishBulk(chunk);
       });
-    });
 
-    tcpServer.listen(config.tcp_port, function() {
-      var address = tcpServer.address();
-      console.log('Process ID: ' + process.pid + ' TCP Server listening on ' + address.address + ":" + address.port);
+      socket.on('end', function() {
+        publishBulk(data);
     });
+  });
 
-    // udp server
-    var dgram = require("dgram");
-    var udpServer = dgram.createSocket(config.udp_version, function(msg, rinfo) {
-      publishBulk(msg);
-    });
+  tcpServer.listen(config.tcp_port, function() {
+    var address = tcpServer.address();
+    console.log('Process ID: ' + process.pid + ' TCP Server listening on ' + address.address + ":" + address.port);
+  });
 
-    udpServer.on('listening', function () {
-      var address = udpServer.address();
-      console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
-    });
+  // udp server
+  var dgram = require("dgram");
+  var udpServer = dgram.createSocket(config.udp_version, function(msg, rinfo) {
+    publishBulk(msg);
+  });
 
-    udpServer.bind(config.udp_port);
+  udpServer.on('listening', function () {
+    var address = udpServer.address();
+    console.log('Process ID: ' + process.pid  + ' UDP Server listening on ' + address.address + ":" + address.port);
+  });
+
+  udpServer.bind(config.udp_port);
+
+  // relp tcp server
+  var relp = require('relp');
+  var relpServer = new relp.Server({ port: '8091' });
+  console.log('Process ID: ' + process.pid  + ' relp tcp  Server listening on ' +  "*:" + '8091');
+
+  relpServer.on('message', function (message) {
+    publish(message.body);
+    relpServer.ack(message);
+  });
 }
 

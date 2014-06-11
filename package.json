@@ -24,7 +24,8 @@
     "restify" : ">=2.8.1",
     "java" : ">=0.3.4",
     "config" : ">=0.4.36",
-    "node-rest-client" : ">=0.8.10"
+    "node-rest-client" : ">=0.8.10",
+    "relp": "nbrownus/node-relp"
   },
   "scripts" : {
     "start" : "node app.js",
