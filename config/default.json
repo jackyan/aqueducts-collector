@@ -1,5 +1,5 @@
 {
-  "workers" : 2,
+//  "workers" : 2,
   "tcp_port" : 8089,
   "http_port" : 8080,
   "udp_version" : "udp4", // "udp4" or "udp6"
