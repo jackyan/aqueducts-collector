@@ -2,11 +2,11 @@
 
 require './relp.rb'
 
-workers = 12
-batch_num = 500000
+workers = 1
+batch_num = 1
 
 def make_test_data(batch_num)
-  s = RelpClient.new('tc-aqueducts-dev00.tc', 8091, ['syslog'], 256, 1)
+  s = RelpClient.new('localhost', 8089, ['syslog'], 256, 1)
   batch_num.times do |n|
     s.syslog_write("{\"product\" : \"nodejs\", \"service\" : \"kafka\", \"idc\" : \"tc\", \"page_view\" : \"#{n}\", \"response_time\" : \"#{n}\", \"src_prod\" : \"test\", \"lidc\" : \"HD\"}\n")
     sleep 0.001

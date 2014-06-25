@@ -14,7 +14,7 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
 
   def valid_command?(command)
     valid_commands = Array.new
-    
+
     #Allow anything in the basic protocol for both directions
     valid_commands << 'open'
     valid_commands << 'close'
@@ -46,7 +46,6 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
       frame['message']
     ].join(' ').strip
     begin
-      @logger.debug? and @logger.debug("Writing to socket", :data => wiredata)
       socket.write(wiredata)
       #Ending each frame with a newline is required in the specifications
       #Doing it a separately is useful (but a bit of a bodge) because
@@ -74,7 +73,6 @@ class Relp#This isn't much use on its own, but gives RelpServer and RelpClient t
         frame['datalen'] = (leading_digit + socket.readline(' ')).strip.to_i
         frame['message'] = socket.read(frame['datalen'])
       end
-      @logger.debug? and @logger.debug("Read frame", :frame => frame)
     rescue EOFError,Errno::ECONNRESET,IOError
       raise ConnectionClosed
     end
@@ -98,8 +96,7 @@ end
 class RelpServer < Relp
 
   def initialize(host,port,required_commands=[])
-    @logger = Cabin::Channel.get(LogStash)
-    
+
     @server=true
 
     #These are things that are part of the basic protocol, but only valid in one direction (rsp, close etc.)
@@ -111,11 +108,8 @@ class RelpServer < Relp
     begin
       @server = TCPServer.new(host, port)
     rescue Errno::EADDRINUSE
-      @logger.error("Could not start RELP server: Address in use",
-                    :host => host, :port => port)
       raise
     end
-    @logger.info? and @logger.info("Started RELP Server", :host => host, :port => port)
   end
 
   def accept
@@ -124,13 +118,11 @@ class RelpServer < Relp
     if frame['command'] == 'open'
       offer=Hash[*frame['message'].scan(/^(.*)=(.*)$/).flatten]
       if offer['relp_version'].nil?
-        @logger.warn("No relp version specified")
         #if no version specified, relp spec says we must close connection
         self.serverclose(socket)
         raise RelpError, 'No relp_version specified'
       #subtracting one array from the other checks to see if all elements in @required_relp_commands are present in the offer
       elsif ! (@required_relp_commands - offer['commands'].split(',')).empty?
-        @logger.warn("Not all required commands are available", :required => @required_relp_commands, :offer => offer['commands'])
         #Tell them why we're closing the connection:
         response_frame = Hash.new
         response_frame['txnr'] = frame['txnr']
@@ -212,8 +204,6 @@ class RelpClient < Relp
 
   def initialize(host,port,required_commands = [],buffer_size = 128,
                  retransmission_timeout=10)
-    @logger = Cabin::Channel.get(LogStash)
-    @logger.info? and @logger.info("Starting RELP client", :host => host, :port => port)
     @server = false
     @buffer = Hash.new
 
@@ -228,7 +218,7 @@ class RelpClient < Relp
 
     @socket=TCPSocket.new(host,port)
 
-    #This'll start the automatic frame numbering 
+    #This'll start the automatic frame numbering
     @lasttxnr = 0
 
     offer=Hash.new
@@ -251,13 +241,12 @@ class RelpClient < Relp
 
     #subtracting one array from the other checks to see if all elements in @required_relp_commands are present in the offer
     elsif ! (@required_relp_commands - response['commands'].split(',')).empty?
-      #if it can't receive syslog it's useless to us; close the connection 
+      #if it can't receive syslog it's useless to us; close the connection
       self.close()
       raise InsufficientCommands, response['commands'] + ' offered, require '
           + @required_relp_commands.join(',')
     end
     #If we've got this far with no problems, we're good to go
-    @logger.info? and @logger.info("Connection establish with server")
 
     #This thread deals with responses that come back
     reader = Thread.start do
