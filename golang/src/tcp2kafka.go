@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"runtime"
 	"syscall"
 	"time"
-	"os"
 )
 
 import (
@@ -22,9 +22,9 @@ import (
 func makeConfig() *sarama.ProducerConfig {
 	config := sarama.NewProducerConfig()
 
-	config.RequiredAcks = sarama.WaitForLocal // NoResponse, WaitForLocal, WaitForAll
+	config.RequiredAcks = sarama.NoResponse // NoResponse, WaitForLocal, WaitForAll
 	config.MaxBufferTime = 1000 * time.Millisecond
-	config.MaxBufferedBytes = 1024 * 1024 * 16
+	config.MaxBufferedBytes = 1024 * 1024
 
 	return config
 }
@@ -32,7 +32,7 @@ func makeConfig() *sarama.ProducerConfig {
 // 构造kafka producer client
 func makeProducer(addr []string) (producer *sarama.Producer, err error) {
 
-	clientConfig := &sarama.ClientConfig{MetadataRetries: 10, WaitForElection: 250 * time.Millisecond}
+	clientConfig := &sarama.ClientConfig{MetadataRetries: 3, WaitForElection: 250 * time.Millisecond}
 	client, err := sarama.NewClient("client_id", addr, clientConfig)
 	if err != nil {
 		return
@@ -51,6 +51,7 @@ func makeProducer(addr []string) (producer *sarama.Producer, err error) {
 // 异步发送msg
 func publish(producer *sarama.Producer, topic string, msg string) error {
 	return producer.QueueMessage(topic, nil, sarama.StringEncoder(msg))
+	// log.Println(msg)
 }
 
 // 根据消息体选择目的producer client
@@ -128,7 +129,7 @@ func verify(s []byte) (producer *sarama.Producer, topic string, msg string, err 
 }
 
 // 处理连接请求
-func handle(conn net.Conn, ch chan []byte) {
+func handle(conn net.Conn, ch chan []byte, timer chan bool) {
 	defer conn.Close()
 
 	if tcpConn, ok := conn.(*net.TCPConn); ok {
@@ -138,11 +139,11 @@ func handle(conn net.Conn, ch chan []byte) {
 	reader := bufio.NewReader(conn)
 
 	for {
-	  // 读取bytes，push进channel,等待发送routine消费
+		// 读取bytes，push进channel,等待发送routine消费
 
 		if tcpConn, ok := conn.(*net.TCPConn); ok {
-			tcpConn.SetReadDeadline(time.Now().Add(5 * time.Second))
-			tcpConn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			tcpConn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			tcpConn.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		}
 
 		line, err := reader.ReadBytes('\n')
@@ -155,7 +156,12 @@ func handle(conn net.Conn, ch chan []byte) {
 			line = line[:len(line)-1]
 		}
 
-		ch <- line
+		select {
+		case ch <- line:
+		case <-timer:
+			runtime.Gosched()
+			ch <- line
+		}
 	}
 }
 
@@ -200,23 +206,36 @@ func initProducers(config *jconfig.Config) error {
 }
 
 // 清空Error channel
-func dumpErrors(p *sarama.Producer) {
+func dumpErrors(p *sarama.Producer, timer chan bool) {
 	for {
-		err := <-p.Errors()
-		log.Println(err)
+		select {
+		case <-p.Errors():
+		case <-timer:
+			runtime.Gosched()
+		}
 	}
 }
 
 // 从channel中消费msg，发送
-func publishMsg(ch chan []byte) {
+func publishMsg(ch chan []byte, timer chan bool) {
 	for {
-		line := <-ch
-		producer, topic, msg, err := verify(line)
-		if err == nil {
-			go publish(producer, topic, msg)
-		} else {
-			log.Println(string(line))
+		select {
+		case line := <-ch:
+			producer, topic, msg, err := verify(line)
+			if err == nil {
+				go publish(producer, topic, msg)
+			} else {
+				log.Println(string(line))
+			}
+		case <-timer:
+			runtime.Gosched()
 		}
+	}
+}
+func makeTimer(timer chan bool, interval time.Duration) {
+	for {
+		time.Sleep(interval * time.Millisecond)
+		timer <- true
 	}
 }
 
@@ -228,11 +247,11 @@ var CONFIG *jconfig.Config
 // main function
 func main() {
 
-  args := os.Args
-  if args == nil || len(args) < 2 {
-    fmt.Println("Usage: tcp2kafka ./default.json")
-    return
-  }
+	args := os.Args
+	if args == nil || len(args) < 2 {
+		fmt.Println("Usage: tcp2kafka ./default.json")
+		return
+	}
 
 	const Compiler = "gc"
 	const GOARCH string = "amd64"
@@ -258,17 +277,32 @@ func main() {
 		return
 	}
 
+	// dumpError timer
+	dumpTimer := make(chan bool, 1)
+	go makeTimer(dumpTimer, 1500)
+	defer close(dumpTimer)
+
+	// push to msgChan timer
+	pushTimer := make(chan bool, 1)
+	go makeTimer(pushTimer, 1000)
+	defer close(pushTimer)
+
+	// pull from msgChan timer
+	publishTimer := make(chan bool, 1)
+	go makeTimer(publishTimer, 1000)
+	defer close(publishTimer)
+
 	for _, p := range PRODUCERS {
-		go dumpErrors(p)
+		go dumpErrors(p, dumpTimer)
 	}
 
 	// 定长阻塞队列
-	msgChan := make(chan []byte, 100000)
+	msgChan := make(chan []byte, 10000*10000)
 	defer close(msgChan)
 
 	// 初始化发送routine
 	for i := 0; i < runtime.NumCPU(); i++ {
-		go publishMsg(msgChan)
+		go publishMsg(msgChan, publishTimer)
 	}
 
 	for {
@@ -277,6 +311,6 @@ func main() {
 			log.Println(err)
 			continue
 		}
-		go handle(conn, msgChan)
+		go handle(conn, msgChan, pushTimer)
 	}
 }
