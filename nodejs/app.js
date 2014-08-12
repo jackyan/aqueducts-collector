@@ -13,7 +13,8 @@ function selectProducer(message) {
   try {
     if ("topic_list" == config.load_balancer) {
       config.clusters.forEach(function(v, i, a) {
-        var topic = message.product + "_" + message.service + "_topic";
+        product = message.product || message.username || message.organization
+        var topic = product + "_" + message.service + "_topic";
         if (v.topic_list.indexOf(topic) > -1) {
           target = v.name;
         }
@@ -33,16 +34,19 @@ function publish(msg) {
   try {
     var message = JSON.parse(msg || null);
     var key = message.key || null;
-    var topic = message.product + "_" + message.service + "_topic";
+    product = message.product || message.username || message.organization
+    var topic = product + "_" + message.service + "_topic";
     var producer = selectProducer(message);
 
-    if (null == message || null == message.product || null == message.service || null == producer)
+    if (null == message || null == product || null == message.service || null == producer)
       return "product && service must be provided";
     else {
       message.event_time = new Date().getTime();
       message.topic = topic;
 
       producer.sendSync(new kafka.KeyedMessage(topic, key, JSON.stringify(message)));
+      console.log(topic)
+      console.log(message)
       return "ok";
     }
   } catch (err) {
