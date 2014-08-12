@@ -1,0 +1,24 @@
+{
+  "port" : "8089",
+  "load_balancer" : "topic_list",
+  "max_buffer_time" : 1000,
+  "max_buffered_bytes" : 1024000,
+  "clusters" : [ 
+    { 
+      "name" : "default",
+      "broker_list": ["localhost:9092"]
+    },
+    { 
+      "name" : "cluster1",
+      "broker_list": ["127.0.0.1:9092"],
+      "topic_list" : [],
+      "idc_list" : []
+    },
+    {
+      "name" : "cluster2",
+      "broker_list": ["localhost:9092"],
+      "topic_list" : [],
+      "idc_list" : []
+    }
+  ]
+}

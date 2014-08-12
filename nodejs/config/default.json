@@ -1,0 +1,17 @@
+{
+  "http_port" : 8090,
+  "load_balancer" : "idc_list", // "topic_list" or "idc_list"
+  "token_api_url" : "http://yf-aqueducts-chart00.yf01.baidu.com:8765/v3/validate_token",
+  "clusters" : [ 
+    { 
+      "name" : "default",
+      "broker_list": "sh01-aqueducts-kafka00.sh01:9092"
+    },
+    { 
+      "name" : "cluster1",
+      "broker_list": "sh01-aqueducts-kafka00.sh01:9092",
+      "topic_list" : [],
+      "idc_list" : []
+    }
+  ]
+}
