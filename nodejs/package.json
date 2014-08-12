@@ -25,10 +25,11 @@
     "java" : ">=0.3.4",
     "config" : ">=0.4.36",
     "node-rest-client" : ">=0.8.10",
-    "relp": "nbrownus/node-relp"
+    "relp": "nbrownus/node-relp",
+    "restler": "danwrong/restler"
   },
   "scripts" : {
-    "start" : "node app.js",
+    "start" : "nohup node app.js > ./nodejs2kafka.log 2>&1 &",
     "test" : "node ./test/test.js"
   },
   "main" : "./app.js",

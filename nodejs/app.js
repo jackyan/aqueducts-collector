@@ -1,6 +1,7 @@
 var restify = require('restify');
 var config = require('config');
 var kafka = require('./kafka');
+var rest = require('restler')
 
 var Producers = {};
 config.clusters.forEach(function(v, i, a){
@@ -28,10 +29,6 @@ function selectProducer(message) {
   return Producers[target];
 }
 
-function check(msg) {
-  return true;
-}
-
 function publish(msg) {
   try {
     var message = JSON.parse(msg || null);
@@ -42,9 +39,6 @@ function publish(msg) {
     if (null == message || null == message.product || null == message.service || null == producer)
       return "product && service must be provided";
     else {
-      if (!check(message))
-        return "please register first";
-
       message.event_time = new Date().getTime();
       message.topic = topic;
 
@@ -65,13 +59,28 @@ function publishBulk(msg) {
     lines = [ bulkMsgs ] ;                                                                                                                                                                    
   }   
   lines.forEach(function(line) {
-    // publish
     publish(line);
   });
 }
 
+function checkToken(auth_token, params, res) {
+  rest.post(config.token_api_url, {
+    data: { token: auth_token },
+  }).on('complete', function(data, response) {
+    if (response.statusCode == 200) {
+      res.send({response : publish(params.message)})
+    } else {
+      res.send({response : "worng token"})
+    }
+  });
+}
+
 function httpPublish(req, res, next) {
-  res.send({reponse : publish(req.params.message) });
+  if (token = req.headers.token) {
+    checkToken(token, req.params, res)
+  } else {
+    res.send({response : "don't have token"})
+  }
   next();
 }
 
@@ -106,6 +115,7 @@ if (cluster.isMaster) {
     console.log('Process ID: ' + process.pid + ' HTTP Server listening on %s', httpServer.url);
   });
 
+  /*
   // tcp server
   var net = require('net');
   var tcpServer = net.createServer(function (socket) {
@@ -147,5 +157,6 @@ if (cluster.isMaster) {
     publish(message.body);
     relpServer.ack(message);
   });
+  */
 }
 

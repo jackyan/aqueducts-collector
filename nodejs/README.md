@@ -6,8 +6,8 @@
 ## usage
 ### http server
 1. performance: 8000 qps
-1. `curl -X POST -d "message={\"product\" : \"nodejs\", \"service\": \"kafka\", \"idc\": \"tc\"}" http://localhost:8080/publish`
-1. `curl -X POST -d 'message={"product" : "nodejs", "service": "kafka", "idc": "tc"}' http://localhost:8080/publish`
+1. `curl -H "token: user_token" -X POST -d "message={\"product\" : \"nodejs\", \"service\": \"kafka\", \"idc\": \"tc\"}" http://localhost:8080/publish`
+1. `curl -H "token: user_token" -X POST -d 'message={"product" : "nodejs", "service": "kafka", "idc": "tc"}' http://localhost:8080/publish`
 
 ### tcp server
 1. performance: 

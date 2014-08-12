@@ -1,26 +1,17 @@
 {
-//  "workers" : 2,
-  "tcp_port" : 8089,
-  "http_port" : 8080,
-  "udp_version" : "udp4", // "udp4" or "udp6"
-  "udp_port" : 8090,
+  "http_port" : 8090,
   "load_balancer" : "idc_list", // "topic_list" or "idc_list"
+  "token_api_url" : "http://yf-aqueducts-chart00.yf01.baidu.com:8765/v3/validate_token",
   "clusters" : [ 
     { 
       "name" : "default",
-      "broker_list": "cq01-aqueducts-kafka00.cq01:9092"
+      "broker_list": "sh01-aqueducts-kafka00.sh01:9092"
     },
     { 
       "name" : "cluster1",
-      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
-      "topic_list" : ["test_topic_4_dba"],
-      "idc_list" : []
-    },
-    {
-      "name" : "cluster2",
-      "broker_list": "cq01-aqueducts-kafka00.cq01:9092",
+      "broker_list": "sh01-aqueducts-kafka00.sh01:9092",
       "topic_list" : [],
-      "idc_list" : ["tc"]
+      "idc_list" : []
     }
   ]
 }
