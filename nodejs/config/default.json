@@ -1,5 +1,5 @@
 {
-  "http_port" : 8090,
+  "http_port" : 8080,
   "load_balancer" : "idc_list", // "topic_list" or "idc_list"
   "token_api_url" : "http://yf-aqueducts-chart00.yf01.baidu.com:8765/v3/validate_token",
   "clusters" : [ 
