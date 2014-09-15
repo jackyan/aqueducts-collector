@@ -68,9 +68,7 @@ function publishBulk(msg) {
 }
 
 function checkToken(auth_token, params, res) {
-  rest.post(config.token_api_url, {
-    data: { token: auth_token },
-  }).on('complete', function(data, response) {
+  rest.get(config.token_api_url + "?token=" + auth_token).on('complete', function(data, response) {
     if (response.statusCode == 200) {
       res.send({response : publish(params.message)})
     } else {
